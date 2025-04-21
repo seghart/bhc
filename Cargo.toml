@@ -1,0 +1,11 @@
+[package]
+name = "bhc"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+async-trait = "0.1"
+russh = "0.45.0"
+russh-keys = "0.45.0"
+tokio = { version = "1", features = ["full"] }
+futures = "0.3"
