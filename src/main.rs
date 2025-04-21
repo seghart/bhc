@@ -51,7 +51,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                         "服务器 {} SSH 执行 {} 命令成功完成。\n输出:\n{}\n",
                         config.ip, command.command, output
                     );
-                    //println!("{}", success_message); // 控制台输出
+                    // 控制台输出
                     output_file
                         .write_all(success_message.as_bytes())
                         .expect("成功日志文件写入失败"); // 写入文件
