@@ -1,0 +1,6 @@
+服务器 10.14.102.91 SSH 上传文件build/conn.ini到/tmp/conn.ini成功完成。
+输出:
+File successfully transferred to /tmp/conn.ini
+服务器 10.14.102.74 SSH 上传文件build/conn.ini到/tmp/conn.ini成功完成。
+输出:
+File successfully transferred to /tmp/conn.ini

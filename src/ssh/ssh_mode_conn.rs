@@ -1,7 +1,11 @@
 use async_trait::async_trait;
 use russh::client::{self, Config as RusshConfig, Handler};
 use russh_keys::key::PublicKey;
+use russh_sftp::client::SftpSession;
+use russh_sftp::protocol::OpenFlags;
 use std::sync::Arc;
+use tokio::fs::File;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 #[derive(Debug, Clone)]
 pub struct Config {
@@ -29,7 +33,7 @@ impl Handler for MyHandler {
     }
 }
 
-pub async fn ssh_connection(
+pub async fn ssh_command_mode_conn(
     config: Config,
     command: &str,
 ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
@@ -56,9 +60,6 @@ pub async fn ssh_connection(
     } else {
         channel.exec(true, command.as_bytes()).await?; // 转换为字节切片
     }
-    // // 构建执行 sudo 命令的完整命令
-    // let sudo_command = format!("echo {} | sudo -S {}", config.password, command); // 使用 echo 来传递密码
-    // channel.exec(true, sudo_command.as_bytes()).await?; // 转换为字节切片
 
     let mut output: Vec<u8> = Vec::new();
     loop {
@@ -82,4 +83,50 @@ pub async fn ssh_connection(
 
     // 返回命令输出
     Ok(output_str)
+}
+
+pub async fn ssh_upload_mode_conn(
+    config: Config,
+    local_path: &str,
+    remote_path: &str,
+) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    let russh_config: Arc<RusshConfig> = Arc::new(RusshConfig::default());
+
+    let address: String = format!("{}:{}", config.ip, config.port);
+    let handler: MyHandler = MyHandler;
+
+    // 连接到 SSH 服务器
+    let mut session: client::Handle<MyHandler> =
+        client::connect(russh_config, address, handler).await?;
+
+    // 使用提供的密码进行认证
+    session
+        .authenticate_password(&config.user, &config.password)
+        .await?;
+
+    // 打开会话通道
+    let channel: russh::Channel<client::Msg> = session.channel_open_session().await?;
+    channel.request_subsystem(true, "sftp").await.unwrap();
+    let sftp = SftpSession::new(channel.into_stream()).await.unwrap();
+
+    // 打开本地文件并读取内容
+    let mut local_file = File::open(local_path).await.unwrap();
+    let mut buffer = Vec::new();
+    local_file.read_to_end(&mut buffer).await.unwrap();
+
+    // 打开远程文件并写入内容
+    let mut remote_file = sftp
+        .open_with_flags(
+            remote_path,
+            OpenFlags::CREATE | OpenFlags::TRUNCATE | OpenFlags::WRITE,
+        )
+        .await
+        .unwrap();
+    remote_file.write_all(&buffer).await.unwrap();
+    remote_file.flush().await.unwrap();
+
+    println!("File successfully transferred to {}", remote_path);
+
+    // 返回 SFTP 操作的结果
+    Ok(format!("File successfully transferred to {}", remote_path))
 }
