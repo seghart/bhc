@@ -25,7 +25,7 @@ fn convert_comm(command_comm: Vec<readfiles::command::Comm>) -> Vec<ssh_mode_con
         .map(|c| ssh_mode_conn::Comm { command: c.command })
         .collect()
 }
-async fn ssh_cmd_command(cli: Cli) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+async fn ssh_cmd_mode(cli: Cli) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let (conn_path, command) = cli.get_command_params();
 
     // 从文件中读取配置和命令
@@ -123,7 +123,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let cli = cli::cli_run::Cli::cmd();
     match cli.status {
         cli::cli_run::Modes::Command { .. } => {
-            ssh_cmd_command(cli).await.expect("SSH 命令执行失败");
+            ssh_cmd_mode(cli).await.expect("SSH 命令执行失败");
         }
         cli::cli_run::Modes::Upload { .. } => {
             ssh_upload_mode(cli).await.expect("SSH 上传文件失败");
