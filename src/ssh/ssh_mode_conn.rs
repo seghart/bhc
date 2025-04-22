@@ -125,7 +125,7 @@ pub async fn ssh_upload_mode_conn(
     remote_file.write_all(&buffer).await.unwrap();
     remote_file.flush().await.unwrap();
 
-    println!("File successfully transferred to {}", remote_path);
+    //println!("File successfully transferred to {}", remote_path);
 
     // 返回 SFTP 操作的结果
     Ok(format!("File successfully transferred to {}", remote_path))

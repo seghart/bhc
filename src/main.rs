@@ -51,6 +51,7 @@ async fn ssh_cmd_command(cli: Cli) -> Result<(), Box<dyn std::error::Error + Sen
                         "服务器 {} SSH 执行 {} 命令成功完成。\n输出:\n{}\n",
                         config.ip, command.command, output
                     );
+                    println!("{},SSH 执行 {} 命令成功完成", config.ip, command.command);
                     // 控制台输出
                     output_file
                         .write_all(success_message.as_bytes())
@@ -93,13 +94,17 @@ async fn ssh_upload_mode(cli: Cli) -> Result<(), Box<dyn std::error::Error + Sen
                     "服务器 {} SSH 上传文件{}到{}成功完成。\n输出:\n{}\n",
                     config.ip, local_path, remote_path, output
                 );
-                // 控制台输出
+                println!(
+                    "{},SSH 上传文件{}到{}成功完成",
+                    config.ip, local_path, remote_path
+                );
                 output_file
                     .write_all(success_message.as_bytes())
                     .expect("成功日志文件写入失败"); // 写入文件
             }
             Err(e) => {
-                let error_message: String = format!("服务器 {} SSH 执行失败: {:?}\n", config.ip, e);
+                let error_message: String =
+                    format!("服务器 {} SSH 上传文件失败: {:?}\n", config.ip, e);
                 let output_err_file = File::create("ssh_error.txt");
                 eprintln!("{}", error_message); // 控制台输出
                 output_err_file
