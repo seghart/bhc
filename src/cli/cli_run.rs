@@ -53,7 +53,7 @@ impl Cli {
         }
     }
 
-    pub fn cmd() -> Cli {
+    pub fn new() -> Self {
         let comm = env::args().nth(1).expect("没有提供Upload或Command参数");
         match comm.as_str() {
             "Upload" => {

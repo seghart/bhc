@@ -26,7 +26,7 @@ fn convert_comm(command_comm: Vec<readfiles::command::Comm>) -> Vec<ssh_mode_con
 }
 
 async fn ssh_mode() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let cli = cli::cli_run::Cli::cmd();
+    let cli = cli::cli_run::Cli::new();
     // 创建或打开输出文件
     let mut output_file = File::create("ssh_results.txt")
         .await
