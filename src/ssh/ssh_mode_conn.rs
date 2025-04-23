@@ -52,7 +52,7 @@ impl Config {
 
         Ok(session)
     }
-    pub async fn open_sftp_session(
+    async fn open_sftp_session(
         &self,
     ) -> Result<SftpSession, Box<dyn std::error::Error + Send + Sync>> {
         let session = self.connect_and_authenticate().await?;
