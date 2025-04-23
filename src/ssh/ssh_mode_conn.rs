@@ -32,57 +32,90 @@ impl Handler for MyHandler {
         Ok(true)
     }
 }
+impl Config {
+    async fn connect_and_authenticate(
+        &self,
+    ) -> Result<client::Handle<MyHandler>, Box<dyn std::error::Error + Send + Sync>> {
+        let russh_config: Arc<RusshConfig> = Arc::new(RusshConfig::default());
+
+        let address: String = format!("{}:{}", self.ip, self.port);
+        let handler: MyHandler = MyHandler;
+
+        // 连接到 SSH 服务器
+        let mut session: client::Handle<MyHandler> =
+            client::connect(russh_config, address, handler).await?;
+
+        // 使用提供的密码进行认证
+        session
+            .authenticate_password(&self.user, &self.password)
+            .await?;
+
+        Ok(session)
+    }
+    pub async fn open_sftp_session(
+        &self,
+    ) -> Result<SftpSession, Box<dyn std::error::Error + Send + Sync>> {
+        let session = self.connect_and_authenticate().await?;
+        let channel: russh::Channel<client::Msg> = session.channel_open_session().await?;
+        channel.request_subsystem(true, "sftp").await.unwrap();
+        let sftp = SftpSession::new(channel.into_stream()).await.unwrap();
+        Ok(sftp)
+    }
+}
+impl Comm {
+    pub fn new(command: &str) -> Self {
+        Comm {
+            command: command.to_string(),
+        }
+    }
+    async fn execute_command(
+        &self,
+        session: &mut client::Handle<MyHandler>,
+        command: &str,
+        password: &str,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+        // 打开会话通道
+        let mut channel: russh::Channel<client::Msg> = session.channel_open_session().await?;
+        if command.contains("sudo") {
+            // 构建执行 sudo 命令的完整命令
+            let sudo_command = format!("echo {} | sudo -S {}", password, command); // 使用 echo 来传递密码
+            channel.exec(true, sudo_command.as_bytes()).await?; // 转换为字节切片
+        } else {
+            channel.exec(true, command.as_bytes()).await?; // 转换为字节切片
+        }
+        let mut output: Vec<u8> = Vec::new();
+        loop {
+            match channel.wait().await {
+                Some(russh::ChannelMsg::Data { data }) => {
+                    output.extend_from_slice(&data);
+                }
+                Some(russh::ChannelMsg::Eof) => {
+                    break;
+                }
+                None => {
+                    break;
+                }
+                _ => {}
+            }
+        }
+        // 将输出转换为字符串
+        let output_str = String::from_utf8_lossy(&output).to_string();
+        //println!("命令输出: {}", output_str);
+        // 返回命令输出
+        Ok(output_str)
+    }
+}
 
 pub async fn ssh_command_mode_conn(
     config: Config,
     command: &str,
 ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-    let russh_config: Arc<RusshConfig> = Arc::new(RusshConfig::default());
-
-    let address: String = format!("{}:{}", config.ip, config.port);
-    let handler: MyHandler = MyHandler;
-
-    // 连接到 SSH 服务器
-    let mut session: client::Handle<MyHandler> =
-        client::connect(russh_config, address, handler).await?;
-
-    // 使用提供的密码进行认证
-    session
-        .authenticate_password(&config.user, &config.password)
+    let mut session = config.connect_and_authenticate().await?;
+    let comm = Comm::new(command);
+    let out_put = comm
+        .execute_command(&mut session, command, &config.password)
         .await?;
-
-    // 打开会话通道
-    let mut channel: russh::Channel<client::Msg> = session.channel_open_session().await?;
-    if command.contains("sudo") {
-        // 构建执行 sudo 命令的完整命令
-        let sudo_command = format!("echo {} | sudo -S {}", config.password, command); // 使用 echo 来传递密码
-        channel.exec(true, sudo_command.as_bytes()).await?; // 转换为字节切片
-    } else {
-        channel.exec(true, command.as_bytes()).await?; // 转换为字节切片
-    }
-
-    let mut output: Vec<u8> = Vec::new();
-    loop {
-        match channel.wait().await {
-            Some(russh::ChannelMsg::Data { data }) => {
-                output.extend_from_slice(&data);
-            }
-            Some(russh::ChannelMsg::Eof) => {
-                break;
-            }
-            None => {
-                break;
-            }
-            _ => {}
-        }
-    }
-
-    // 将输出转换为字符串
-    let output_str = String::from_utf8_lossy(&output).to_string();
-    //println!("命令输出: {}", output_str);
-
-    // 返回命令输出
-    Ok(output_str)
+    Ok(out_put)
 }
 
 pub async fn ssh_upload_mode_conn(
@@ -90,24 +123,8 @@ pub async fn ssh_upload_mode_conn(
     local_path: &str,
     remote_path: &str,
 ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-    let russh_config: Arc<RusshConfig> = Arc::new(RusshConfig::default());
-
-    let address: String = format!("{}:{}", config.ip, config.port);
-    let handler: MyHandler = MyHandler;
-
-    // 连接到 SSH 服务器
-    let mut session: client::Handle<MyHandler> =
-        client::connect(russh_config, address, handler).await?;
-
-    // 使用提供的密码进行认证
-    session
-        .authenticate_password(&config.user, &config.password)
-        .await?;
-
-    // 打开会话通道
-    let channel: russh::Channel<client::Msg> = session.channel_open_session().await?;
-    channel.request_subsystem(true, "sftp").await.unwrap();
-    let sftp = SftpSession::new(channel.into_stream()).await.unwrap();
+    // 连接到 SSH 服务器并打开 SFTP 会话
+    let sftp = config.open_sftp_session().await?;
 
     // 打开本地文件并读取内容
     let mut local_file = File::open(local_path).await.unwrap();
