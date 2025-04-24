@@ -75,7 +75,10 @@ impl Cli {
                     status: Modes::Command { conn_path, command },
                 }
             }
-            _ => panic!("无效的模式，请使用 Upload 或 Command"),
+            _ => {
+                eprintln!("无效的参数，请使用 Upload 或 Command");
+                std::process::exit(1);
+            }
         }
     }
 }
