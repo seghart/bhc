@@ -62,7 +62,7 @@ async fn ssh_mode() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                                 "服务器 {} SSH 执行 {} 命令成功完成。\n输出:\n{}\n",
                                 config.ip, command.command, output
                             );
-                            println!("{},SSH 执行 {} 命令成功完成", config.ip, command.command);
+                            // println!("{},SSH 执行 {} 命令成功完成", config.ip, command.command);
                             output_file
                                 .write_all(success_message.as_bytes())
                                 .await
@@ -99,10 +99,10 @@ async fn ssh_mode() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                             "服务器 {} SSH 上传文件{}到{}成功完成。\n输出:\n{}\n",
                             config.ip, local_path, remote_path, output
                         );
-                        println!(
-                            "{},SSH 上传文件{}到{}成功完成",
-                            config.ip, local_path, remote_path
-                        );
+                        // println!(
+                        //     "{},SSH 上传文件{}到{}成功完成",
+                        //     config.ip, local_path, remote_path
+                        // );
                         output_file
                             .write_all(success_message.as_bytes())
                             .await
