@@ -70,7 +70,7 @@ async fn ssh_mode() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                         }
                         Err(e) => {
                             let error_message: String =
-                                format!("服务器 {} SSH 执行失败: {:?}\n", config.ip, e);
+                                format!("服务器 {} SSH 执行失败: {:?}\n,请检查ip地址是否正确以及网络是否通畅", config.ip, e);
                             eprintln!("{}", error_message); // 控制台输出
                             output_err_file
                                 .write_all(error_message.as_bytes())
@@ -109,8 +109,10 @@ async fn ssh_mode() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                             .expect("成功日志文件写入失败"); // 写入文件
                     }
                     Err(e) => {
-                        let error_message: String =
-                            format!("服务器 {} SSH 执行失败: {:?}\n", config.ip, e);
+                        let error_message: String = format!(
+                            "服务器 {} SSH 执行失败: {:?}\n请检查ip地址是否正确以及网络是否通畅",
+                            config.ip, e
+                        );
                         eprintln!("{}", error_message); // 控制台输出
                         output_err_file
                             .write_all(error_message.as_bytes())
