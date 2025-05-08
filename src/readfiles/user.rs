@@ -1,70 +1,70 @@
-// 定义 Config 结构体，用于存储每一行解析后的配置信息。
+// Define the Config struct to store parsed configuration information for each line.
 #[derive(Debug)]
 pub struct Config {
-    pub ip: String,        // 用于存储 IP 地址
-    pub port: u16,         // 用于存储端口号，u16 类型表示无符号16位整数
-    pub user: String,      // 用于存储用户名
-    pub password: String,  // 用于存储密码
+    pub ip: String,       // Stores the IP address
+    pub port: u16,        // Stores the port number, u16 represents an unsigned 16-bit integer
+    pub user: String,     // Stores the username
+    pub password: String, // Stores the password
 }
 
-// 函数：读取配置文件并返回 Result，其中包含 Vec<Config> 代表多个配置，或是 I/O 错误。
+// Function: Reads the configuration file and returns a Result containing a Vec<Config> for multiple configurations or an I/O error.
 pub fn read_config_file(file_path: &str) -> std::io::Result<Vec<Config>> {
-    // 使用 std::path::Path 来创建文件路径
+    // Use std::path::Path to create the file path
     let path = std::path::Path::new(file_path);
-    // 尝试打开文件，如果失败则返回 Err，`?` 会自动传播错误
+    // Attempt to open the file, return Err if it fails, `?` propagates the error
     let file = std::fs::File::open(&path)?;
-    // 使用 BufReader 包装文件对象，用于逐行读取文件内容
+    // Wrap the file object with BufReader to read the file line by line
     let reader = std::io::BufReader::new(file);
 
-    // 创建一个空的 Vec，用于存储解析后的 Config 结构体
+    // Create an empty Vec to store the parsed Config structs
     let mut configs = Vec::new();
 
-    // 遍历每一行文件内容。每一行是 Result<String, io::Error> 类型
+    // Iterate over each line in the file. Each line is of type Result<String, io::Error>
     for line in std::io::BufRead::lines(reader) {
-        // 通过 `?` 操作符解包 Result，遇到错误会直接返回错误
+        // Unwrap the Result using `?`, returning an error if one occurs
         let line = line?;
 
-        // 如果行内容不为空，继续处理
+        // If the line is not empty, proceed with processing
         if !line.is_empty() {
-            // 使用 `split(',')` 按逗号分割参数，结果收集到一个 Vec<&str>
+            // Split the line by ',' to separate parameters, collecting the results into a Vec<&str>
             let params: Vec<&str> = line.split(',').collect();
 
-            // 创建一个空的 Config 结构体，准备填充数据
+            // Create an empty Config struct to populate with data
             let mut config = Config {
                 ip: String::new(),
-                port: 0, // 默认端口为 0，后面解析
+                port: 0, // Default port is 0, will be parsed later
                 user: String::new(),
                 password: String::new(),
             };
 
-            // 遍历每个分割后的键值对
+            // Iterate over each split key-value pair
             for param in params {
-                // 每个参数按 `=` 分割成键和值，`pair` 是 Vec<&str>
+                // Split each parameter by '=' into a key and value, `pair` is a Vec<&str>
                 let pair: Vec<&str> = param.split('=').collect();
 
-                // 如果 `pair` 有两个元素（键和值），则进行处理
+                // If `pair` has two elements (key and value), process it
                 if pair.len() == 2 {
-                    // 根据键名来匹配，解析并存储相应的值
+                    // Match the key name to parse and store the corresponding value
                     match pair[0] {
-                        // 如果键名是 "ip"，则赋值给 `config.ip`
+                        // If the key is "ip", assign the value to `config.ip`
                         "ip" => config.ip = pair[1].to_string(),
-                        // 如果键名是 "port"，则尝试解析成 u16 类型，解析失败则使用默认值 22
+                        // If the key is "port", attempt to parse it as u16, default to 22 if parsing fails
                         "port" => config.port = pair[1].parse().unwrap_or(22),
-                        // 如果键名是 "user"，则赋值给 `config.user`
+                        // If the key is "user", assign the value to `config.user`
                         "user" => config.user = pair[1].to_string(),
-                        // 如果键名是 "password"，则赋值给 `config.password`
+                        // If the key is "password", assign the value to `config.password`
                         "password" => config.password = pair[1].to_string(),
-                        // 忽略其他无关的键值对
+                        // Ignore other irrelevant key-value pairs
                         _ => (),
                     }
                 }
             }
 
-            // 将解析后的 Config 结构体添加到 configs 向量中
+            // Add the parsed Config struct to the configs vector
             configs.push(config);
         }
     }
 
-    // 如果成功读取所有配置，返回 Ok 包装的 Vec<Config>
+    // Return Ok wrapping the Vec<Config> if all configurations are successfully read
     Ok(configs)
 }

@@ -1,51 +1,50 @@
 #[derive(Debug)]
-pub struct Comm{
-    pub command:String,
+pub struct Comm {
+    pub command: String,
 }
 
-
-pub fn read_comm_config_file(cmd_path:&str) -> std::io::Result<Vec<Comm>> {
+pub fn read_comm_config_file(cmd_path: &str) -> std::io::Result<Vec<Comm>> {
     let path = std::path::Path::new(cmd_path);
-    // 尝试打开文件，如果失败则返回 Err，`?` 会自动传播错误
+    // Try to open the file, return Err if it fails, `?` will propagate the error
     let file = std::fs::File::open(&path)?;
-    // 使用 BufReader 包装文件对象，用于逐行读取文件内容
-    let reader = std::io::BufReader::new(file); 
+    // Wrap the file object with BufReader for reading the file line by line
+    let reader = std::io::BufReader::new(file);
     let mut commands = Vec::new();
-    // 遍历每一行文件内容。每一行是 Result<String, io::Error> 类型
+    // Iterate through each line in the file. Each line is of type Result<String, io::Error>
     for line in std::io::BufRead::lines(reader) {
-        // 通过 `?` 操作符解包 Result，遇到错误会直接返回错误
+        // Unwrap the Result using `?`, return the error if any
         let line = line?;
 
-        // 如果行内容不为空，继续处理
+        // If the line is not empty, proceed
         if !line.is_empty() {
-            // 使用 `split(',')` 按逗号分割参数，结果收集到一个 Vec<&str>
+            // Split the line by ',' and collect the results into a Vec<&str>
             let params: Vec<&str> = line.split(',').collect();
-            let mut comm = Comm{
-                command:String::new(),
+            let mut comm = Comm {
+                command: String::new(),
             };
-                        // 遍历每个分割后的键值对
+            // Iterate through each split key-value pair
             for param in params {
-                // 每个参数按 `=` 分割成键和值，`pair` 是 Vec<&str>
+                // Split each parameter by '=' into key and value, `pair` is Vec<&str>
                 let pair: Vec<&str> = param.split('=').collect();
 
-                // 如果 `pair` 有两个元素（键和值），则进行处理
+                // If `pair` has two elements (key and value), process it
                 if pair.len() == 2 {
-                    // 根据键名来匹配，解析并存储相应的值
+                    // Match the key name, parse and store the corresponding value
                     match pair[0] {
-                        // 如果键名是 "command"，则赋值给 `config.ip`
+                        // If the key is "command", assign the value to `comm.command`
                         "command" => comm.command = pair[1].to_string(),
-                        // 忽略其他无关的键值对
+                        // Ignore other irrelevant key-value pairs
                         _ => (),
                     }
                 }
             }
-            // 将解析后的 Config 结构体添加到 configs 向量中
+            // Add the parsed Comm struct to the commands vector
             commands.push(comm);
-
         }
     }
     Ok(commands)
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

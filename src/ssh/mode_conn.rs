@@ -28,7 +28,7 @@ impl Handler for MyHandler {
     type Error = Box<dyn std::error::Error + Send + Sync>;
 
     async fn check_server_key(self: &mut Self, _: &PublicKey) -> Result<bool, Self::Error> {
-        // 临时接受服务器密钥
+        // Temporarily accept the server key
         Ok(true)
     }
 }
@@ -41,11 +41,11 @@ impl Config {
         let address: String = format!("{}:{}", self.ip, self.port);
         let handler: MyHandler = MyHandler;
 
-        // 连接到 SSH 服务器
+        // Connect to the SSH server
         let mut session: client::Handle<MyHandler> =
             client::connect(russh_config, address, handler).await?;
 
-        // 使用提供的密码进行认证
+        // Authenticate using the provided password
         session
             .authenticate_password(&self.user, &self.password)
             .await?;
@@ -74,14 +74,14 @@ impl Comm {
         command: &str,
         password: &str,
     ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-        // 打开会话通道
+        // Open a session channel
         let mut channel: russh::Channel<client::Msg> = session.channel_open_session().await?;
         if command.contains("sudo") {
-            // 构建执行 sudo 命令的完整命令
-            let sudo_command = format!("echo {} | sudo -S {}", password, command); // 使用 echo 来传递密码
-            channel.exec(true, sudo_command.as_bytes()).await?; // 转换为字节切片
+            // Construct the full command to execute with sudo
+            let sudo_command = format!("echo {} | sudo -S {}", password, command); // Use echo to pass the password
+            channel.exec(true, sudo_command.as_bytes()).await?; // Convert to byte slice
         } else {
-            channel.exec(true, command.as_bytes()).await?; // 转换为字节切片
+            channel.exec(true, command.as_bytes()).await?; // Convert to byte slice
         }
         let mut output: Vec<u8> = Vec::new();
         loop {
@@ -98,10 +98,9 @@ impl Comm {
                 _ => {}
             }
         }
-        // 将输出转换为字符串
+        // Convert the output to a string
         let output_str = String::from_utf8_lossy(&output).to_string();
-        //println!("命令输出: {}", output_str);
-        // 返回命令输出
+        // Return the command output
         Ok(output_str)
     }
 }
@@ -123,15 +122,15 @@ pub async fn ssh_upload_mode_conn(
     local_path: &str,
     remote_path: &str,
 ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-    // 连接到 SSH 服务器并打开 SFTP 会话
+    // Connect to the SSH server and open an SFTP session
     let sftp = config.open_sftp_session().await?;
 
-    // 打开本地文件并读取内容
+    // Open the local file and read its contents
     let mut local_file = File::open(local_path).await.unwrap();
     let mut buffer = Vec::new();
     local_file.read_to_end(&mut buffer).await.unwrap();
 
-    // 打开远程文件并写入内容
+    // Open the remote file and write the contents
     let mut remote_file = sftp
         .open_with_flags(
             remote_path,
@@ -142,8 +141,6 @@ pub async fn ssh_upload_mode_conn(
     remote_file.write_all(&buffer).await.unwrap();
     remote_file.flush().await.unwrap();
 
-    //println!("File successfully transferred to {}", remote_path);
-
-    // 返回 SFTP 操作的结果
+    // Return the result of the SFTP operation
     Ok(format!("File successfully transferred to {}", remote_path))
 }
