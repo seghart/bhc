@@ -1,4 +1,4 @@
-# BHC Project
+# batch host command Project
 
 ## Overview
 BHC is a Rust-based application designed to facilitate SSH connections for executing commands and uploading files. It provides a command-line interface (CLI) for users to interact with remote servers securely.
