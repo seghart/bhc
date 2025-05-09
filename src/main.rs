@@ -26,15 +26,87 @@ fn convert_comm(command_comm: Vec<readfiles::command::Comm>) -> Vec<mode_conn::C
         .map(|c| mode_conn::Comm { command: c.command })
         .collect()
 }
+async fn handle_command_mode(
+    configs: Vec<mode_conn::Config>,
+    commands: Vec<mode_conn::Comm>,
+    mut output_file: File,
+    mut output_err_file: File,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    // Iterate through all configurations and commands to perform SSH connections
+    for config in configs {
+        for command in &commands {
+            match mode_conn::ssh_command_mode_conn(config.clone(), command.command.as_str()).await {
+                Ok(output) => {
+                    let success_message: String = format!(
+                        "Server {} successfully executed SSH command '{}'.\nOutput:\n{}\n",
+                        config.ip, command.command, output
+                    );
+                    output_file
+                        .write_all(success_message.as_bytes())
+                        .await
+                        .expect("Failed to write to success log file");
+                }
+                Err(e) => {
+                    let error_message: String = format!(
+                                "Server {} failed to execute SSH command: {:?}\nPlease check if the IP address is correct, if the password is correct, and if the network is stable.",
+                                config.ip, e
+                            );
+                    eprintln!("{}", error_message);
+                    output_err_file
+                        .write_all(error_message.as_bytes())
+                        .await
+                        .expect("Failed to write to error log file");
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+async fn handle_upload_mode(
+    configs: Vec<mode_conn::Config>,
+    local_path: &str,
+    remote_path: &str,
+    mut output_file: File,
+    mut output_err_file: File,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    // Iterate through all configurations to perform file uploads
+    for config in configs {
+        match mode_conn::ssh_upload_mode_conn(config.clone(), local_path, remote_path).await {
+            Ok(output) => {
+                let success_message: String = format!(
+                    "Server {} successfully uploaded file '{}' to '{}'.\nOutput:\n{}\n",
+                    config.ip, local_path, remote_path, output
+                );
+                output_file
+                    .write_all(success_message.as_bytes())
+                    .await
+                    .expect("Failed to write to success log file");
+            }
+            Err(e) => {
+                let error_message: String = format!(
+                            "Server {} failed to upload file: {:?}\nPlease check if the IP address is correct, if the password is correct, and if the network is stable.",
+                            config.ip, e
+                        );
+                eprintln!("{}", error_message);
+                output_err_file
+                    .write_all(error_message.as_bytes())
+                    .await
+                    .expect("Failed to write to error log file");
+            }
+        }
+    }
+    Ok(())
+}
 
 /// Handles the SSH mode logic, including executing commands or uploading files.
-async fn ssh_mode() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+async fn handle_ssh_mode() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let cli = cli::cli_run::Cli::new();
     // Create or open output files
-    let mut output_file = File::create("ssh_results.txt")
+    let output_file = File::create("ssh_results.txt")
         .await
         .expect("Failed to create success log file");
-    let mut output_err_file = File::create("ssh_error.txt")
+    let output_err_file = File::create("ssh_error.txt")
         .await
         .expect("Failed to create error log file");
 
@@ -51,37 +123,7 @@ async fn ssh_mode() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             // Convert configurations and commands to the required types for the SSH module
             let configs: Vec<mode_conn::Config> = convert_config(user_configs);
             let commands: Vec<mode_conn::Comm> = convert_comm(command_comm);
-
-            // Iterate through all configurations and commands to perform SSH connections
-            for config in configs {
-                for command in &commands {
-                    match mode_conn::ssh_command_mode_conn(config.clone(), command.command.as_str())
-                        .await
-                    {
-                        Ok(output) => {
-                            let success_message: String = format!(
-                                "Server {} successfully executed SSH command '{}'.\nOutput:\n{}\n",
-                                config.ip, command.command, output
-                            );
-                            output_file
-                                .write_all(success_message.as_bytes())
-                                .await
-                                .expect("Failed to write to success log file");
-                        }
-                        Err(e) => {
-                            let error_message: String = format!(
-                                "Server {} failed to execute SSH command: {:?}\nPlease check if the IP address is correct and the network is stable.",
-                                config.ip, e
-                            );
-                            eprintln!("{}", error_message);
-                            output_err_file
-                                .write_all(error_message.as_bytes())
-                                .await
-                                .expect("Failed to write to error log file");
-                        }
-                    }
-                }
-            }
+            handle_command_mode(configs, commands, output_file, output_err_file).await?;
         }
         cli::cli_run::Modes::Upload { .. } => {
             let (conn_path, local_path, remote_path) = cli.get_upload_params();
@@ -91,34 +133,14 @@ async fn ssh_mode() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 readfiles::user::read_config_file(&conn_path)?;
             // Convert configurations to the required types for the SSH module
             let configs: Vec<mode_conn::Config> = convert_config(user_configs);
-
-            // Iterate through all configurations to perform file uploads
-            for config in configs {
-                match mode_conn::ssh_upload_mode_conn(config.clone(), local_path, remote_path).await
-                {
-                    Ok(output) => {
-                        let success_message: String = format!(
-                            "Server {} successfully uploaded file '{}' to '{}'.\nOutput:\n{}\n",
-                            config.ip, local_path, remote_path, output
-                        );
-                        output_file
-                            .write_all(success_message.as_bytes())
-                            .await
-                            .expect("Failed to write to success log file");
-                    }
-                    Err(e) => {
-                        let error_message: String = format!(
-                            "Server {} failed to upload file: {:?}\nPlease check if the IP address is correct and the network is stable.",
-                            config.ip, e
-                        );
-                        eprintln!("{}", error_message);
-                        output_err_file
-                            .write_all(error_message.as_bytes())
-                            .await
-                            .expect("Failed to write to error log file");
-                    }
-                }
-            }
+            handle_upload_mode(
+                configs,
+                local_path,
+                remote_path,
+                output_file,
+                output_err_file,
+            )
+            .await?;
         }
     };
 
@@ -128,7 +150,9 @@ async fn ssh_mode() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 /// Main entry point of the application.
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    ssh_mode().await.expect("Main program execution failed");
+    handle_ssh_mode()
+        .await
+        .expect("Main program execution failed");
     Ok(())
 }
 
