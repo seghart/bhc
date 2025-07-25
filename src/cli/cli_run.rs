@@ -1,3 +1,4 @@
+use core::option::Option::{None, Some};
 use std::env;
 #[derive()]
 pub struct Cli {
@@ -39,7 +40,7 @@ impl Cli {
     pub fn get_command_params(&self) -> (&str, &str) {
         match &self.status {
             Modes::Command { conn_path, command } => (conn_path, command),
-            _ => panic!("当前模式不是 Command"),
+            _ => std::process::exit(1),
         }
     }
     pub fn get_upload_params(&self) -> (&str, &str, &str) {
@@ -49,17 +50,41 @@ impl Cli {
                 local_path,
                 remote_path,
             } => (conn_path, local_path, remote_path),
-            _ => panic!("当前模式不是 Upload"),
+            _ => std::process::exit(1),
         }
     }
 
     pub fn new() -> Self {
-        let comm = env::args().nth(1).expect("没有提供Upload或Command参数");
+        let comm = match env::args().nth(1) {
+            Some(c) => c,
+            None => {
+                eprintln!("No Upload or Command parameters provided");
+                std::process::exit(1)
+            }
+        };
         match comm.as_str() {
-            "Upload" => {
-                let conn_path = env::args().nth(2).expect("没有提供连接路径参数");
-                let local_path = env::args().nth(3).expect("没有提供本地路径参数");
-                let remote_path = env::args().nth(4).expect("没有提供远程路径参数");
+            "-Upload" => {
+                let conn_path = match env::args().nth(2) {
+                    Some(c) => c,
+                    None => {
+                        eprintln!("There is no path to conn_config");
+                        std::process::exit(1)
+                    }
+                };
+                let local_path = match env::args().nth(3) {
+                    Some(c) => c,
+                    None => {
+                        eprintln!("There is no local_path");
+                        std::process::exit(1)
+                    }
+                };
+                let remote_path = match env::args().nth(4) {
+                    Some(c) => c,
+                    None => {
+                        eprintln!("There is no remote_path");
+                        std::process::exit(1)
+                    }
+                };
                 Cli {
                     status: Modes::Upload {
                         conn_path,
@@ -69,8 +94,20 @@ impl Cli {
                 }
             }
             "Command" => {
-                let conn_path = env::args().nth(2).expect("没有提供连接路径参数");
-                let command = env::args().nth(3).expect("没有提供命令参数");
+                let conn_path = match env::args().nth(2) {
+                    Some(c) => c,
+                    None => {
+                        eprintln!("There is no remote_path");
+                        std::process::exit(1)
+                    }
+                };
+                let command = match env::args().nth(3) {
+                    Some(c) => c,
+                    None => {
+                        eprintln!("There is no remote_path");
+                        std::process::exit(1)
+                    }
+                };
                 Cli {
                     status: Modes::Command { conn_path, command },
                 }

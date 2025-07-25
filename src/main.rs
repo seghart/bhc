@@ -63,10 +63,7 @@ async fn ssh_mode() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                                 "Server {} successfully executed SSH command '{}'.\nOutput:\n{}\n",
                                 config.ip, command.command, output
                             );
-                            output_file
-                                .write_all(success_message.as_bytes())
-                                .await
-                                .expect("Failed to write to success log file");
+                            output_file.write_all(success_message.as_bytes()).await?
                         }
                         Err(e) => {
                             let error_message: String = format!(
@@ -74,10 +71,7 @@ async fn ssh_mode() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                                 config.ip, e
                             );
                             eprintln!("{}", error_message);
-                            output_err_file
-                                .write_all(error_message.as_bytes())
-                                .await
-                                .expect("Failed to write to error log file");
+                            output_err_file.write_all(error_message.as_bytes()).await?
                         }
                     }
                 }
@@ -101,10 +95,7 @@ async fn ssh_mode() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                             "Server {} successfully uploaded file '{}' to '{}'.\nOutput:\n{}\n",
                             config.ip, local_path, remote_path, output
                         );
-                        output_file
-                            .write_all(success_message.as_bytes())
-                            .await
-                            .expect("Failed to write to success log file");
+                        output_file.write_all(success_message.as_bytes()).await?
                     }
                     Err(e) => {
                         let error_message: String = format!(
@@ -112,10 +103,7 @@ async fn ssh_mode() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                             config.ip, e
                         );
                         eprintln!("{}", error_message);
-                        output_err_file
-                            .write_all(error_message.as_bytes())
-                            .await
-                            .expect("Failed to write to error log file");
+                        output_err_file.write_all(error_message.as_bytes()).await?
                     }
                 }
             }
@@ -128,7 +116,7 @@ async fn ssh_mode() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 /// Main entry point of the application.
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    ssh_mode().await.expect("Main program execution failed");
+    ssh_mode().await?;
     Ok(())
 }
 

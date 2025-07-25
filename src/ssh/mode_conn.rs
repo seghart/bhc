@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use core::option::Option::None;
 use russh::client::{self, Config as RusshConfig, Handler};
 use russh_keys::key::PublicKey;
 use russh_sftp::client::SftpSession;
